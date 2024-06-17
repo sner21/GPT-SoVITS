@@ -1,14 +1,14 @@
-import sys,os
+import sys, os
 
 import torch
 
 # 推理用的指定模型
-sovits_path = ""
-gpt_path = ""
+sovits_path = "GPT_SoVITS/pretrained_models/s2G488k.pth"
+gpt_path = "GPT_SoVITS/pretrained_models/s1bert25hz-2kh-longer-epoch=68e-step=50232.ckpt"
 is_half_str = os.environ.get("is_half", "True")
 is_half = True if is_half_str.lower() == 'true' else False
-is_share_str = os.environ.get("is_share","False")
-is_share= True if is_share_str.lower() == 'true' else False
+is_share_str = os.environ.get("is_share", "False")
+is_share = True if is_share_str.lower() == 'true' else False
 
 cnhubert_path = "GPT_SoVITS/pretrained_models/chinese-hubert-base"
 bert_path = "GPT_SoVITS/pretrained_models/chinese-roberta-wwm-ext-large"
@@ -39,9 +39,10 @@ if infer_device == "cuda":
             or "1070" in gpu_name
             or "1080" in gpu_name
     ):
-        is_half=False
+        is_half = False
 
-if(infer_device=="cpu"):is_half=False
+if (infer_device == "cpu"): is_half = False
+
 
 class Config:
     def __init__(self):
@@ -64,3 +65,11 @@ class Config:
         self.webui_port_subfix = webui_port_subfix
 
         self.api_port = api_port
+
+
+ref_wav_menu = {
+    1: {
+        "role": "雷电将军",
+        "field":"我此番也是受神子之邀，体验一下市井游乐的氛围，和各位并无二致。",
+    }
+}
