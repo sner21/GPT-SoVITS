@@ -70,6 +70,20 @@ class Config:
 ref_wav_menu = {
     1: {
         "role": "雷电将军",
-        "field":"我此番也是受神子之邀，体验一下市井游乐的氛围，和各位并无二致。",
-    }
+        "field": "我此番也是受神子之邀，体验一下市井游乐的氛围，和各位并无二致。",
+        "sovits_weights": "SoVITS_weights/雷电将军_e15_s885.pth",
+        "gpt_weights": "GPT_weights/雷电将军-e10.ckpt"
+    },
+    2: {
+        "role": "三月七",
+        "field": "名字是我自己取的，大家也叫我三月、小三月…你呢？你想叫我什么？",
+        "sovits_weights": "SoVITS_weights/三月七_e15_s2445.pth",
+        "gpt_weights": "GPT_weights/三月七-e10.ckpt"
+    },
+    3: {
+        "role": "流萤",
+        "field": "因为你身上别着星穹列车的徽章呀，我在大银幕上见过！",
+        "sovits_weights": "SoVITS_weights/流萤_e15_s495.pth",
+        "gpt_weights": "GPT_weights/流萤-e10.ckpt"
+    },
 }
