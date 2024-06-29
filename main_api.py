@@ -4,6 +4,8 @@ import os
 
 now_dir = os.getcwd()
 sys.path.append(now_dir)
+sys.path.append(now_dir+'/../')
+sys.path.append(now_dir+'/../../')
 sys.path.append("%s/GPT_SoVITS" % (now_dir))
 from fastapi import FastAPI, Request, HTTPException
 from GPT_SoVITS.m import get_tts_wav,change_sovits_weights,change_gpt_weights
@@ -66,7 +68,7 @@ async def get_wav(role, text, top_k=5, top_p=1, temperature=1, language="中文"
     change_sovits_weights(raw["sovits_weights"])
     change_gpt_weights(raw["gpt_weights"])
     wav_stream = get_tts_wav(
-        now_dir + "\\wav\\" + raw["field"] + ".wav",
+        now_dir + "/wav/" + raw["field"] + ".wav",
         raw["field"],
         "中文",
         text or "",
