@@ -1,11 +1,12 @@
-'''
+"""
 按中英混合识别
 按日英混合识别
 多语种启动切分识别语种
 全部按中文识别
 全部按英文识别
 全部按日文识别
-'''
+"""
+
 import os, re, logging
 import LangSegment
 import soundfile
@@ -25,23 +26,26 @@ import torch
 # 要加上
 os.environ["no_proxy"] = "localhost, 127.0.0.1, ::1"
 os.environ["all_proxy"] = ""
-os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'  # 当遇到mps不支持的步骤时使用cpu
+os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"  # 当遇到mps不支持的步骤时使用cpu
 
 if os.path.exists("./gweight.txt"):
-    with open("./gweight.txt", 'r', encoding="utf-8") as file:
+    with open("./gweight.txt", "r", encoding="utf-8") as file:
         gweight_data = file.read()
-        gpt_path = os.environ.get(
-            "gpt_path", gweight_data)
+        gpt_path = os.environ.get("gpt_path", gweight_data)
 else:
     gpt_path = os.environ.get(
-        "gpt_path", "GPT_SoVITS/pretrained_models/s1bert25hz-2kh-longer-epoch=68e-step=50232.ckpt")
+        "gpt_path",
+        "GPT_SoVITS/pretrained_models/s1bert25hz-2kh-longer-epoch=68e-step=50232.ckpt",
+    )
 
 if os.path.exists("./sweight.txt"):
-    with open("./sweight.txt", 'r', encoding="utf-8") as file:
+    with open("./sweight.txt", "r", encoding="utf-8") as file:
         sweight_data = file.read()
         sovits_path = os.environ.get("sovits_path", sweight_data)
 else:
-    sovits_path = os.environ.get("sovits_path", "GPT_SoVITS/pretrained_models/s2G488k.pth")
+    sovits_path = os.environ.get(
+        "sovits_path", "GPT_SoVITS/pretrained_models/s2G488k.pth"
+    )
 # gpt_path = os.environ.get(
 #     "gpt_path", "pretrained_models/s1bert25hz-2kh-longer-epoch=68e-step=50232.ckpt"
 # )
@@ -154,9 +158,9 @@ def change_sovits_weights(sovits_path):
         hps.data.filter_length // 2 + 1,
         hps.train.segment_size // hps.data.hop_length,
         n_speakers=hps.data.n_speakers,
-        **hps.model
+        **hps.model,
     )
-    if ("pretrained" not in sovits_path):
+    if "pretrained" not in sovits_path:
         del vq_model.enc_q
     if is_half == True:
         vq_model = vq_model.half().to(device)
@@ -185,7 +189,8 @@ def change_gpt_weights(gpt_path):
     t2s_model.eval()
     total = sum([param.nelement() for param in t2s_model.parameters()])
     print("Number of parameter: %.2fM" % (total / 1e6))
-    with open("./gweight.txt", "w", encoding="utf-8") as f: f.write(gpt_path)
+    with open("./gweight.txt", "w", encoding="utf-8") as f:
+        f.write(gpt_path)
 
 
 change_gpt_weights(gpt_path)
@@ -239,7 +244,21 @@ def get_bert_inf(phones, word2ph, norm_text, language):
     return bert
 
 
-splits = {"，", "。", "？", "！", ",", ".", "?", "!", "~", ":", "：", "—", "…", }
+splits = {
+    "，",
+    "。",
+    "？",
+    "！",
+    ",",
+    ".",
+    "?",
+    "!",
+    "~",
+    ":",
+    "：",
+    "—",
+    "…",
+}
 
 
 def get_first(text):
@@ -301,7 +320,7 @@ def get_phones_and_bert(text, language):
             bert_list.append(bert)
         bert = torch.cat(bert_list, dim=1)
         phones = sum(phones_list, [])
-        norm_text = ''.join(norm_text_list)
+        norm_text = "".join(norm_text_list)
 
     return phones, bert.to(dtype), norm_text
 
@@ -316,7 +335,7 @@ def merge_short_text_in_array(texts, threshold):
         if len(text) >= threshold:
             result.append(text)
             text = ""
-    if (len(text) > 0):
+    if len(text) > 0:
         if len(result) == 0:
             result.append(text)
         else:
@@ -324,8 +343,19 @@ def merge_short_text_in_array(texts, threshold):
     return result
 
 
-async def get_tts_wav(ref_wav_path, prompt_text, prompt_language, text, text_language, how_to_cut=i18n("不切"), top_k=20,
-                top_p=0.6, temperature=0.6, ref_free=False, wav_text=ttime()):
+async def get_tts_wav(
+    ref_wav_path,
+    prompt_text,
+    prompt_language,
+    text,
+    text_language,
+    how_to_cut=i18n("不切"),
+    top_k=20,
+    top_p=0.6,
+    temperature=0.6,
+    ref_free=False,
+    wav_text=ttime(),
+):
     if prompt_text is None or len(prompt_text) == 0:
         ref_free = True
     t0 = ttime()
@@ -335,10 +365,12 @@ async def get_tts_wav(ref_wav_path, prompt_text, prompt_language, text, text_lan
     text_language = dict_language[text_language]
     if not ref_free:
         prompt_text = prompt_text.strip("\n")
-        if (prompt_text[-1] not in splits): prompt_text += "。" if prompt_language != "en" else "."
+        if prompt_text[-1] not in splits:
+            prompt_text += "。" if prompt_language != "en" else "."
         print(i18n("实际输入的参考文本:"), prompt_text)
     text = text.strip("\n")
-    if (text[0] not in splits and len(get_first(text)) < 4): text = "。" + text if text_language != "en" else "." + text
+    if text[0] not in splits and len(get_first(text)) < 4:
+        text = "。" + text if text_language != "en" else "." + text
     print(i18n("实际输入的目标文本:"), text)
     zero_wav = np.zeros(
         int(hps.data.sampling_rate * 0.3),
@@ -346,7 +378,7 @@ async def get_tts_wav(ref_wav_path, prompt_text, prompt_language, text, text_lan
     )
     with torch.no_grad():
         wav16k, sr = librosa.load(ref_wav_path, sr=16000)
-        if (wav16k.shape[0] > 160000 or wav16k.shape[0] < 48000):
+        if wav16k.shape[0] > 160000 or wav16k.shape[0] < 48000:
             raise OSError(i18n("参考音频在3~10秒范围外，请更换！"))
         wav16k = torch.from_numpy(wav16k)
         zero_wav_torch = torch.from_numpy(zero_wav)
@@ -367,15 +399,15 @@ async def get_tts_wav(ref_wav_path, prompt_text, prompt_language, text, text_lan
         prompt_semantic = codes[0, 0]
     t1 = ttime()
     # 切字
-    if (how_to_cut == i18n("凑四句一切")):
+    if how_to_cut == i18n("凑四句一切"):
         text = cut1(text)
-    elif (how_to_cut == i18n("凑50字一切")):
+    elif how_to_cut == i18n("凑50字一切"):
         text = cut2(text)
-    elif (how_to_cut == i18n("按中文句号。切")):
+    elif how_to_cut == i18n("按中文句号。切"):
         text = cut3(text)
-    elif (how_to_cut == i18n("按英文句号.切")):
+    elif how_to_cut == i18n("按英文句号.切"):
         text = cut4(text)
-    elif (how_to_cut == i18n("按标点符号切")):
+    elif how_to_cut == i18n("按标点符号切"):
         text = cut5(text)
     while "\n\n" in text:
         text = text.replace("\n\n", "\n")
@@ -476,34 +508,47 @@ async def get_tts_wav(ref_wav_path, prompt_text, prompt_language, text, text_lan
                 prompt,
                 bert,
                 # prompt_phone_len=ph_offset,
-                top_k=config['inference']['top_k'],
-                early_stop_num=hz * max_sec)
+                top_k=config["inference"]["top_k"],
+                early_stop_num=hz * max_sec,
+            )
         t3 = ttime()
         # print(pred_semantic.shape,idx)
-        pred_semantic = pred_semantic[:, -idx:].unsqueeze(0)  # .unsqueeze(0)#mq要多unsqueeze一次
+        pred_semantic = pred_semantic[:, -idx:].unsqueeze(
+            0
+        )  # .unsqueeze(0)#mq要多unsqueeze一次
         refer = get_spepc(hps, ref_wav_path)  # .to(device)
-        if (is_half == True):
+        if is_half == True:
             refer = refer.half().to(device)
         else:
             refer = refer.to(device)
         # audio = vq_model.decode(pred_semantic, all_phoneme_ids, refer).detach().cpu().numpy()[0, 0]
-        audio = \
-            vq_model.decode(pred_semantic, torch.LongTensor(phones2).to(device).unsqueeze(0),
-                            refer).detach().cpu().numpy()[
-                0, 0]  ###试试重建不带上prompt部分
+        audio = (
+            vq_model.decode(
+                pred_semantic, torch.LongTensor(phones2).to(device).unsqueeze(0), refer
+            )
+            .detach()
+            .cpu()
+            .numpy()[0, 0]
+        )  ###试试重建不带上prompt部分
         audio_opt.append(audio)
         audio_opt.append(zero_wav)
         t4 = ttime()
-        audio_bytes = pack_raw(audio_bytes, (np.concatenate(audio_opt, 0) * 32768).astype(np.int16), hps.data.sampling_rate)
+        audio_bytes = pack_raw(
+            audio_bytes,
+            (np.concatenate(audio_opt, 0) * 32768).astype(np.int16),
+            hps.data.sampling_rate,
+        )
         # # logger.info("%.3f\t%.3f\t%.3f\t%.3f" % (t1 - t0, t2 - t1, t3 - t2, t4 - t3))
         # audio_bytes, audio_chunk = read_clean_buffer(audio_bytes)
         # yield audio_chunk
     audio_bytes = pack_wav(audio_bytes, hps.data.sampling_rate)
     yield audio_bytes.getvalue()
+
+
 def pack_wav(audio_bytes, rate):
-    data = np.frombuffer(audio_bytes.getvalue(),dtype=np.int16)
+    data = np.frombuffer(audio_bytes.getvalue(), dtype=np.int16)
     wav_bytes = BytesIO()
-    sf.write(wav_bytes, data, rate, format='wav')
+    sf.write(wav_bytes, data, rate, format="wav")
 
     return wav_bytes
 
@@ -549,7 +594,7 @@ def cut1(inp):
     if len(split_idx) > 1:
         opts = []
         for idx in range(len(split_idx) - 1):
-            opts.append("".join(inps[split_idx[idx]: split_idx[idx + 1]]))
+            opts.append("".join(inps[split_idx[idx] : split_idx[idx + 1]]))
     else:
         opts = [inp]
     return "\n".join(opts)
@@ -594,8 +639,8 @@ def cut5(inp):
     # if not re.search(r'[^\w\s]', inp[-1]):
     # inp += '。'
     inp = inp.strip("\n")
-    punds = r'[,.;?!、，。？！;：…]'
-    items = re.split(f'({punds})', inp)
+    punds = r"[,.;?!、，。？！;：…]"
+    items = re.split(f"({punds})", inp)
     mergeitems = ["".join(group) for group in zip(items[::2], items[1::2])]
     # 在句子不存在符号或句尾无符号的时候保证文本完整
     if len(items) % 2 == 1:
@@ -606,7 +651,7 @@ def cut5(inp):
 
 def custom_sort_key(s):
     # 使用正则表达式提取字符串中的数字部分和非数字部分
-    parts = re.split('(\d+)', s)
+    parts = re.split("(\d+)", s)
     # 将数字部分转换为整数，非数字部分保持不变
     parts = [int(part) if part.isdigit() else part for part in parts]
     return parts
@@ -614,12 +659,16 @@ def custom_sort_key(s):
 
 def change_choices():
     SoVITS_names, GPT_names = get_weights_names()
-    return {"choices": sorted(SoVITS_names, key=custom_sort_key), "__type__": "update"}, {
-        "choices": sorted(GPT_names, key=custom_sort_key), "__type__": "update"}
+    return {
+        "choices": sorted(SoVITS_names, key=custom_sort_key),
+        "__type__": "update",
+    }, {"choices": sorted(GPT_names, key=custom_sort_key), "__type__": "update"}
 
 
 pretrained_sovits_name = "GPT_SoVITS/pretrained_models/s2G488k.pth"
-pretrained_gpt_name = "GPT_SoVITS/pretrained_models/s1bert25hz-2kh-longer-epoch=68e-step=50232.ckpt"
+pretrained_gpt_name = (
+    "GPT_SoVITS/pretrained_models/s1bert25hz-2kh-longer-epoch=68e-step=50232.ckpt"
+)
 SoVITS_weight_root = "SoVITS_weights"
 GPT_weight_root = "GPT_weights"
 os.makedirs(SoVITS_weight_root, exist_ok=True)
@@ -629,10 +678,12 @@ os.makedirs(GPT_weight_root, exist_ok=True)
 def get_weights_names():
     SoVITS_names = [pretrained_sovits_name]
     for name in os.listdir(SoVITS_weight_root):
-        if name.endswith(".pth"): SoVITS_names.append("%s/%s" % (SoVITS_weight_root, name))
+        if name.endswith(".pth"):
+            SoVITS_names.append("%s/%s" % (SoVITS_weight_root, name))
     GPT_names = [pretrained_gpt_name]
     for name in os.listdir(GPT_weight_root):
-        if name.endswith(".ckpt"): GPT_names.append("%s/%s" % (GPT_weight_root, name))
+        if name.endswith(".ckpt"):
+            GPT_names.append("%s/%s" % (GPT_weight_root, name))
     return SoVITS_names, GPT_names
 
 

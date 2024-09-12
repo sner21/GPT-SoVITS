@@ -4,11 +4,12 @@ import os
 
 now_dir = os.getcwd()
 sys.path.append(now_dir)
-sys.path.append(now_dir+'/../')
-sys.path.append(now_dir+'/../../')
+sys.path.append(now_dir + "/../")
+sys.path.append(now_dir + "/../../")
 sys.path.append("%s/GPT_SoVITS" % (now_dir))
 from fastapi import FastAPI, Request, HTTPException
-from GPT_SoVITS.m import get_tts_wav,change_sovits_weights,change_gpt_weights
+from GPT_SoVITS.inference import get_tts_wav, change_sovits_weights, change_gpt_weights
+
 # from GPT_SoVITS.inference_webui import get_tts_wav
 from time import time as ttime
 
@@ -35,38 +36,39 @@ app.add_middleware(
 # )
 
 
-@app.get("/")
+@app.get("/test")
 async def get_wav(request: Request):
-    return JSONResponse({"code": 400, "message": "未指定参考音频且接口无预设"}, status_code=400)
+    return JSONResponse({"code": 200, "message": "test"}, status_code=200)
+
+
+# @app.post("/getTTS")
+# async def get_wav(request: Request):
+#     json_post_raw = await request.json()
+#     raw = ref_wav_menu[json_post_raw["role"]]
+#     path = ttime()
+#     wav_stream = get_tts_wav(
+#         now_dir + "\\wav\\" + raw["field"] + ".wav",
+#         raw["field"],
+#         "中文",
+#         json_post_raw["text"] or "",
+#         "中文",
+#         "凑四句一切",
+#         5,
+#         1,
+#         1,
+#         False,
+#         str(path) + ".wav",
+#     )
+#     return StreamingResponse(wav_stream, media_type="audio/" + "wav")
 
 
 @app.post("/getTTS")
-async def get_wav(request: Request):
-    json_post_raw = await request.json()
-    raw = ref_wav_menu[json_post_raw["role"]]
-    path = ttime()
-    wav_stream = get_tts_wav(
-        now_dir + "\\wav\\" + raw["field"] + ".wav",
-        raw["field"],
-        "中文",
-        json_post_raw["text"] or "",
-        "中文",
-        "凑四句一切",
-        5,
-        1,
-        1,
-        False,
-        str(path) + ".wav",
-    )
-    return StreamingResponse(wav_stream, media_type="audio/" + "wav")
-
-
 @app.get("/getTTS")
 async def get_wav(role, text, top_k=5, top_p=1, temperature=1, language="中文"):
     raw = ref_wav_menu[int(role)]
     path = ttime()
-    change_sovits_weights(raw["sovits_weights"])
-    change_gpt_weights(raw["gpt_weights"])
+    change_sovits_weights(os.environ["sovits_model"] + raw["sovits_weights"])
+    change_gpt_weights(os.environ["sovits_model"] + raw["gpt_weights"])
     wav_stream = get_tts_wav(
         now_dir + "/wav/" + raw["field"] + ".wav",
         raw["field"],

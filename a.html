@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+
+<body>
+    <button>123</button>
+    <audio src="wav/我此番也是受神子之邀，体验一下市井游乐的氛围，和各位并无二致。.wav" controls></audio>
+    123
+    <div class="open_file" onclick="openFile()">打开文件</div>
+
+    <script>
+        const audioCtx = new AudioContext();
+        const au = document.querySelector("audio");
+
+        const openFile = async () => {
+            const res = await window.showOpenFilePicker();
+            res[0].getFile().then(r => {
+                console.log(r.stream())
+                var stream = r.stream()
+
+                const audioCtx = new AudioContext();
+                const analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 512;
+                const source = audioCtx.createMediaElementSource(au)
+                source.connect(analyser);
+                var distortion = audioCtx.createWaveShaper();
+                analyser.connect(distortion);
+                distortion.connect(audioCtx.destination);
+                analyser.fftSize = 2048;
+                const bufferLength = analyser.frequencyBinCount;
+                var data = new Uint8Array(analyser.frequencyBinCount);
+
+                console.log(data)
+                const dataArray = new Uint8Array(bufferLength);
+                analyser.getByteTimeDomainData(dataArray);
+                console.log(dataArray)
+            })
+
+        };
+        let isInit = false;
+        let analyser, data;
+        au.onplay = () => {
+            au.currentTime = 20
+            // console.log("开始播放");
+            if (isInit) return;
+            // 创建音频上下文
+            const audioCtx = new AudioContext();
+            audioCtx.currentTime = 1000
+            // 创建音频源
+
+            const source = audioCtx.createMediaElementSource(au);
+            audioCtx.
+                // 创建分析器节点
+                analyser = audioCtx.createAnalyser();
+            // 设置窗口大小，窗口越大，分析结果越详细
+            analyser.fftSize = 512;
+
+            data = new Uint8Array(analyser.frequencyBinCount);
+
+            // 将源连接到分析器节点
+            source.connect(analyser);
+            // 将分析器节点连接到输出设备
+            analyser.connect(audioCtx.destination);
+            isInit = true;
+            analyser.getByteFrequencyData(data);
+
+            console.log(data)
+            console.log(analyser)
+            console.log(source)
+            console.log(au)
+        };
+
+    </script>
+</body>
+
+</html>
