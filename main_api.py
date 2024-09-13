@@ -1,3 +1,5 @@
+import io
+import numpy as np
 import uvicorn
 import sys
 import os
@@ -8,16 +10,18 @@ sys.path.append(now_dir + "/../")
 sys.path.append(now_dir + "/../../")
 sys.path.append("%s/GPT_SoVITS" % (now_dir))
 from fastapi import FastAPI, Request, HTTPException
+from tools.i18n.i18n import I18nAuto, scan_language_list
 from GPT_SoVITS.inference import get_tts_wav, change_sovits_weights, change_gpt_weights
 
 # from GPT_SoVITS.inference_webui import get_tts_wav
-from time import time as ttime
 
 from config import ref_wav_menu
-from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
 
+language = os.environ.get("language", "Auto")
+language = sys.argv[-1] if sys.argv[-1] in scan_language_list() else language
+i18n = I18nAuto(language=language)
 app = FastAPI()
 # app.add_middleware(SessionMiddleware, secret_key="some-random-string")
 app.add_middleware(
@@ -66,24 +70,34 @@ async def get_wav(request: Request):
 @app.get("/getTTS")
 async def get_wav(role, text, top_k=5, top_p=1, temperature=1, language="中文"):
     raw = ref_wav_menu[int(role)]
-    path = ttime()
-    change_sovits_weights(os.environ["sovits_model"] + raw["sovits_weights"])
-    change_gpt_weights(os.environ["sovits_model"] + raw["gpt_weights"])
-    wav_stream = get_tts_wav(
-        now_dir + "/wav/" + raw["field"] + ".wav",
-        raw["field"],
-        "中文",
-        text or "",
-        language,
-        "凑四句一切",
-        top_k,
-        top_p,
-        temperature,
-        False,
-        str(path) + ".wav",
+    path = os.getenv("sovits_model", "")
+    # path = ttime()
+    change_sovits_weights(path + raw["sovits_weights"])
+    change_gpt_weights(path + raw["gpt_weights"])
+    wav_generator = get_tts_wav(
+        ref_wav_path=now_dir + "/wav/" + raw["field"] + ".wav",
+        prompt_text=raw["field"],
+        prompt_language="中文",
+        text=text or "",
+        text_language=language,
+        how_to_cut=i18n("凑四句一切"),
     )
-    return StreamingResponse(wav_stream, media_type="audio/" + "wav")
+    # 获取采样率和音频数据
+    sample_rate, audio_data = next(wav_generator)
+    audio_bytes = io.BytesIO()
+    # 将音频数据写入字节流
+    import wave
+    with wave.open(audio_bytes, 'wb') as wav_file:
+        wav_file.setnchannels(1)  # 单声道
+        wav_file.setsampwidth(2)  # 16位音频
+        wav_file.setframerate(sample_rate)
+        wav_file.writeframes(audio_data.tobytes())
+    
+    # 将指针移到流的开始
+    audio_bytes.seek(0)
 
+    # 返回StreamingResponse
+    return StreamingResponse(audio_bytes, media_type="audio/wav")
 
 @app.get("/getRefMenu")
 async def get_wav():
